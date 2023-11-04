@@ -645,6 +645,7 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalControlnetMixin):
         timestep: Union[torch.Tensor, float, int],
         encoder_hidden_states: torch.Tensor,
         controlnet_cond: torch.FloatTensor,
+        controlnet_mask: Optional[torch.FloatTensor] = None,
         conditioning_scale: float = 1.0,
         class_labels: Optional[torch.Tensor] = None,
         timestep_cond: Optional[torch.Tensor] = None,
@@ -666,6 +667,8 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalControlnetMixin):
                 The encoder hidden states.
             controlnet_cond (`torch.FloatTensor`):
                 The conditional input tensor of shape `(batch_size, sequence_length, hidden_size)`.
+            controlnet_mask (`torch.FloatTensor`, *optional*):
+                an extra channel to be concatenated with `sample` typically for masking.
             conditioning_scale (`float`, defaults to `1.0`):
                 The scale factor for ControlNet outputs.
             class_labels (`torch.Tensor`, *optional*, defaults to `None`):
@@ -693,6 +696,11 @@ class ControlNetModel(ModelMixin, ConfigMixin, FromOriginalControlnetMixin):
                 If `return_dict` is `True`, a [`~models.controlnet.ControlNetOutput`] is returned, otherwise a tuple is
                 returned where the first element is the sample tensor.
         """
+
+        if controlnet_mask is not None:
+            controlnet_mask = controlnet_mask.repeat_interleave(sample.shape[0], dim=0) # handles classifier free guidance
+            sample = torch.cat([sample, controlnet_mask], dim=1)
+
         # check channel order
         channel_order = self.config.controlnet_conditioning_channel_order
 

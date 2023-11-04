@@ -747,6 +747,7 @@ class StableDiffusionControlNetPipeline(
         self,
         prompt: Union[str, List[str]] = None,
         image: PipelineImageInput = None,
+        mask: Optional[Union[torch.FloatTensor, List[torch.FloatTensor]]] = None,
         height: Optional[int] = None,
         width: Optional[int] = None,
         num_inference_steps: int = 50,
@@ -784,6 +785,8 @@ class StableDiffusionControlNetPipeline(
                 and/or width are passed, `image` is resized accordingly. If multiple ControlNets are specified in
                 `init`, images must be passed as a list such that each element of the list can be correctly batched for
                 input to a single ControlNet.
+            mask (`torch.FloatTensor` or  `List[torch.FloatTensor]`, *optional*):
+                Added by Will Buchwalter: a mask to be concatenated with the cnet's latents
             height (`int`, *optional*, defaults to `self.unet.config.sample_size * self.vae_scale_factor`):
                 The height in pixels of the generated image.
             width (`int`, *optional*, defaults to `self.unet.config.sample_size * self.vae_scale_factor`):
@@ -1036,6 +1039,7 @@ class StableDiffusionControlNetPipeline(
                     encoder_hidden_states=controlnet_prompt_embeds,
                     controlnet_cond=image,
                     conditioning_scale=cond_scale,
+                    controlnet_mask=mask,
                     guess_mode=guess_mode,
                     return_dict=False,
                 )
