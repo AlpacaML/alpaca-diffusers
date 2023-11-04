@@ -24,6 +24,7 @@ from transformers import CLIPTextConfig, CLIPTextModel, CLIPTokenizer
 
 from diffusers import (
     AutoencoderKL,
+    AutoencoderTiny,
     DDIMScheduler,
     DPMSolverMultistepScheduler,
     HeunDiscreteScheduler,
@@ -32,13 +33,19 @@ from diffusers import (
     StableDiffusionImg2ImgPipeline,
     UNet2DConditionModel,
 )
-from diffusers.utils import floats_tensor, load_image, load_numpy, nightly, slow, torch_device
 from diffusers.utils.testing_utils import (
     enable_full_determinism,
+    floats_tensor,
+    load_image,
+    load_numpy,
+    nightly,
+    require_python39_or_higher,
     require_torch_2,
     require_torch_gpu,
     run_test_in_subprocess,
     skip_mps,
+    slow,
+    torch_device,
 )
 
 from ..pipeline_params import (
@@ -63,9 +70,9 @@ def _test_img2img_compile(in_queue, out_queue, timeout):
 
         pipe = StableDiffusionImg2ImgPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", safety_checker=None)
         pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
+        pipe.unet.set_default_attn_processor()
         pipe.to(torch_device)
         pipe.set_progress_bar_config(disable=None)
-
         pipe.unet.to(memory_format=torch.channels_last)
         pipe.unet = torch.compile(pipe.unet, mode="reduce-overhead", fullgraph=True)
 
@@ -73,7 +80,7 @@ def _test_img2img_compile(in_queue, out_queue, timeout):
         image_slice = image[0, -3:, -3:, -1].flatten()
 
         assert image.shape == (1, 512, 768, 3)
-        expected_slice = np.array([0.0593, 0.0607, 0.0851, 0.0582, 0.0636, 0.0721, 0.0751, 0.0981, 0.0781])
+        expected_slice = np.array([0.0606, 0.0570, 0.0805, 0.0579, 0.0628, 0.0623, 0.0843, 0.1115, 0.0806])
 
         assert np.abs(expected_slice - image_slice).max() < 1e-3
     except Exception:
@@ -141,6 +148,9 @@ class StableDiffusionImg2ImgPipelineFastTests(
             "feature_extractor": None,
         }
         return components
+
+    def get_dummy_tiny_autoencoder(self):
+        return AutoencoderTiny(in_channels=3, out_channels=3, latent_channels=4)
 
     def get_dummy_inputs(self, device, seed=0):
         image = floats_tensor((1, 3, 32, 32), rng=random.Random(seed)).to(device)
@@ -230,6 +240,23 @@ class StableDiffusionImg2ImgPipelineFastTests(
 
         assert np.abs(image_slice.flatten() - expected_slice).max() < 1e-3
 
+    def test_stable_diffusion_img2img_tiny_autoencoder(self):
+        device = "cpu"  # ensure determinism for the device-dependent torch.Generator
+        components = self.get_dummy_components()
+        sd_pipe = StableDiffusionImg2ImgPipeline(**components)
+        sd_pipe.vae = self.get_dummy_tiny_autoencoder()
+        sd_pipe = sd_pipe.to(device)
+        sd_pipe.set_progress_bar_config(disable=None)
+
+        inputs = self.get_dummy_inputs(device)
+        image = sd_pipe(**inputs).images
+        image_slice = image[0, -3:, -3:, -1]
+
+        assert image.shape == (1, 32, 32, 3)
+        expected_slice = np.array([0.00669, 0.00669, 0.0, 0.00693, 0.00858, 0.0, 0.00567, 0.00515, 0.00125])
+
+        assert np.abs(image_slice.flatten() - expected_slice).max() < 1e-3
+
     @skip_mps
     def test_save_load_local(self):
         return super().test_save_load_local()
@@ -248,6 +275,9 @@ class StableDiffusionImg2ImgPipelineFastTests(
 
     def test_inference_batch_single_identical(self):
         super().test_inference_batch_single_identical(expected_max_diff=3e-3)
+
+    def test_float16_inference(self):
+        super().test_float16_inference(expected_max_diff=5e-1)
 
 
 @slow
@@ -497,6 +527,7 @@ class StableDiffusionImg2ImgPipelineSlowTests(unittest.TestCase):
         assert out.nsfw_content_detected[0], f"Safety checker should work for prompt: {inputs['prompt']}"
         assert np.abs(out.images[0]).sum() < 1e-5  # should be all zeros
 
+    @require_python39_or_higher
     @require_torch_2
     def test_img2img_compile(self):
         seed = 0
