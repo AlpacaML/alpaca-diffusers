@@ -91,6 +91,20 @@ EXAMPLE_DOC_STRING = """
 """
 
 
+def rescale_noise_cfg(noise_cfg, noise_pred_text, guidance_rescale=0.0):
+    """
+    Rescale `noise_cfg` according to `guidance_rescale`. Based on findings of [Common Diffusion Noise Schedules and
+    Sample Steps are Flawed](https://arxiv.org/pdf/2305.08891.pdf). See Section 3.4
+    """
+    std_text = noise_pred_text.std(dim=list(range(1, noise_pred_text.ndim)), keepdim=True)
+    std_cfg = noise_cfg.std(dim=list(range(1, noise_cfg.ndim)), keepdim=True)
+    # rescale the results from guidance (fixes overexposure)
+    noise_pred_rescaled = noise_cfg * (std_text / std_cfg)
+    # mix with the original results from guidance by factor guidance_rescale to avoid "plain looking" images
+    noise_cfg = guidance_rescale * noise_pred_rescaled + (1 - guidance_rescale) * noise_cfg
+    return noise_cfg
+
+
 class StableDiffusionControlNetPipeline(
     DiffusionPipeline, TextualInversionLoaderMixin, LoraLoaderMixin, FromSingleFileMixin
 ):
@@ -732,6 +746,7 @@ class StableDiffusionControlNetPipeline(
         self,
         prompt: Union[str, List[str]] = None,
         image: PipelineImageInput = None,
+        mask: Optional[Union[torch.FloatTensor, List[torch.FloatTensor]]] = None,
         height: Optional[int] = None,
         width: Optional[int] = None,
         num_inference_steps: int = 50,
@@ -768,6 +783,8 @@ class StableDiffusionControlNetPipeline(
                 and/or width are passed, `image` is resized accordingly. If multiple ControlNets are specified in
                 `init`, images must be passed as a list such that each element of the list can be correctly batched for
                 input to a single ControlNet.
+            mask (`torch.FloatTensor` or  `List[torch.FloatTensor]`, *optional*):
+                Added by Will Buchwalter: a mask to be concatenated with the cnet's latents
             height (`int`, *optional*, defaults to `self.unet.config.sample_size * self.vae_scale_factor`):
                 The height in pixels of the generated image.
             width (`int`, *optional*, defaults to `self.unet.config.sample_size * self.vae_scale_factor`):
@@ -1013,6 +1030,7 @@ class StableDiffusionControlNetPipeline(
                     encoder_hidden_states=controlnet_prompt_embeds,
                     controlnet_cond=image,
                     conditioning_scale=cond_scale,
+                    controlnet_mask=mask,
                     guess_mode=guess_mode,
                     return_dict=False,
                 )
