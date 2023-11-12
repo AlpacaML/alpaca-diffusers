@@ -31,6 +31,8 @@ pipe = pipe.to("mps")
 pipe.enable_attention_slicing()
 
 prompt = "a photo of an astronaut riding a horse on mars"
+image = pipe(prompt).images[0]
+image
 ```
 
 <Tip warning={true}>
@@ -48,10 +50,10 @@ If you're using **PyTorch 1.13**, you need to "prime" the pipeline with an addit
   pipe.enable_attention_slicing()
 
   prompt = "a photo of an astronaut riding a horse on mars"
-# First-time "warmup" pass if PyTorch version is 1.13
+  # First-time "warmup" pass if PyTorch version is 1.13
 + _ = pipe(prompt, num_inference_steps=1)
 
-# Results match those from the CPU device after the warmup pass.
+  # Results match those from the CPU device after the warmup pass.
   image = pipe(prompt).images[0]
 ```
 
@@ -59,13 +61,14 @@ If you're using **PyTorch 1.13**, you need to "prime" the pipeline with an addit
 
 M1/M2 performance is very sensitive to memory pressure. When this occurs, the system automatically swaps if it needs to which significantly degrades performance.
 
-To prevent this from happening, we recommend *attention slicing* to reduce memory pressure during inference and prevent swapping. This is especially relevant if your computer has less than 64GB of system RAM, or if you generate images at non-standard resolutions larger than 512×512 pixels. Call the [`~DiffusionPipeline.enable_attention_slicing`] function on your pipeline:
+To prevent this from happening, we recommend _attention slicing_ to reduce memory pressure during inference and prevent swapping. This is especially relevant if your computer has less than 64GB of system RAM, or if you generate images at non-standard resolutions larger than 512×512 pixels. Call the [`~DiffusionPipeline.enable_attention_slicing`] function on your pipeline:
 
 ```py
 from diffusers import DiffusionPipeline
+import torch
 
 pipeline = DiffusionPipeline.from_pretrained("runwayml/stable-diffusion-v1-5", torch_dtype=torch.float16, variant="fp16", use_safetensors=True).to("mps")
 pipeline.enable_attention_slicing()
 ```
 
-Attention slicing performs the costly attention operation in multiple steps instead of all at once. It usually improves performance by ~20% in computers without universal memory, but we've observed *better performance* in most Apple silicon computers unless you have 64GB of RAM or more.
+Attention slicing performs the costly attention operation in multiple steps instead of all at once. It usually improves performance by ~20% in computers without universal memory, but we've observed _better performance_ in most Apple silicon computers unless you have 64GB of RAM or more.

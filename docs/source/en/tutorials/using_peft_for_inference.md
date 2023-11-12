@@ -12,9 +12,9 @@ specific language governing permissions and limitations under the License.
 
 [[open-in-colab]]
 
-# Inference with PEFT
+# Load LoRAs for inference
 
-There are many adapters trained in different styles to achieve different effects. You can even combine multiple adapters to create new and unique images. With the 🤗 [PEFT](https://huggingface.co/docs/peft/index) integration in 🤗 Diffusers, it is really easy to load and manage adapters for inference. In this guide, you'll learn how to use different adapters with [Stable Diffusion XL (SDXL)](../api/pipelines/stable_diffusion/stable_diffusion_xl) for inference.
+There are many adapters (with LoRAs being the most common type) trained in different styles to achieve different effects. You can even combine multiple adapters to create new and unique images. With the 🤗 [PEFT](https://huggingface.co/docs/peft/index) integration in 🤗 Diffusers, it is really easy to load and manage adapters for inference. In this guide, you'll learn how to use different adapters with [Stable Diffusion XL (SDXL)](../api/pipelines/stable_diffusion/stable_diffusion_xl) for inference.
 
 Throughout this guide, you'll use LoRA as the main adapter technique, so we'll use the terms LoRA and adapter interchangeably. You should have some familiarity with LoRA, and if you don't, we welcome you to check out the [LoRA guide](https://huggingface.co/docs/peft/conceptual_guides/lora).
 
@@ -22,9 +22,8 @@ Let's first install all the required libraries.
 
 ```bash
 !pip install -q transformers accelerate
-# Will be updated once the stable releases are done.
-!pip install -q git+https://github.com/huggingface/peft.git
-!pip install -q git+https://github.com/huggingface/diffusers.git
+!pip install peft
+!pip install diffusers
 ```
 
 Now, let's load a pipeline with a SDXL checkpoint:
@@ -36,7 +35,6 @@ import torch
 pipe_id = "stabilityai/stable-diffusion-xl-base-1.0"
 pipe = DiffusionPipeline.from_pretrained(pipe_id, torch_dtype=torch.float16).to("cuda")
 ```
-
 
 Next, load a LoRA checkpoint with the [`~diffusers.loaders.StableDiffusionXLLoraLoaderMixin.load_lora_weights`] method.
 
@@ -59,7 +57,6 @@ image
 ```
 
 ![toy-face](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/peft_integration/diffusers_peft_lora_inference_8_1.png)
-    
 
 With the `adapter_name` parameter, it is really easy to use another adapter for inference! Load the [nerijs/pixel-art-xl](https://huggingface.co/nerijs/pixel-art-xl) adapter that has been fine-tuned to generate pixel art images, and let's call it `"pixel"`.
 
@@ -81,7 +78,7 @@ image
 ```
 
 ![pixel-art](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/peft_integration/diffusers_peft_lora_inference_12_1.png)
-    
+
 ## Combine multiple adapters
 
 You can also perform multi-adapter inference where you combine different adapter checkpoints for inference.
@@ -102,7 +99,6 @@ LoRA checkpoints in the diffusion community are almost always obtained with [Dre
 
 The trigger words for [CiroN2022/toy-face](https://hf.co/CiroN2022/toy-face) and [nerijs/pixel-art-xl](https://hf.co/nerijs/pixel-art-xl) are found in their repositories.
 
-
 ```python
 # Notice how the prompt is constructed.
 prompt = "toy_face of a hacker with a hoodie, pixel art"
@@ -113,7 +109,7 @@ image
 ```
 
 ![toy-face-pixel-art](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/peft_integration/diffusers_peft_lora_inference_16_1.png)
-    
+
 Impressive! As you can see, the model was able to generate an image that mixes the characteristics of both adapters.
 
 If you want to go back to using only one adapter, use the [`~diffusers.loaders.UNet2DConditionLoadersMixin.set_adapters`] method to activate the `"toy"` adapter:
@@ -133,9 +129,7 @@ image
 
 ![toy-face-again](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/peft_integration/diffusers_peft_lora_inference_18_1.png)
 
-
 If you want to switch to only the base model, disable all LoRAs with the [`~diffusers.loaders.UNet2DConditionLoadersMixin.disable_lora`] method.
-
 
 ```python
 pipe.disable_lora()
@@ -164,4 +158,23 @@ You can also get the active adapters of each pipeline component with [`~diffuser
 list_adapters_component_wise = pipe.get_list_adapters()
 list_adapters_component_wise
 {"text_encoder": ["toy", "pixel"], "unet": ["toy", "pixel"], "text_encoder_2": ["toy", "pixel"]}
+```
+
+## Fusing adapters into the model
+
+You can use PEFT to easily fuse/unfuse multiple adapters directly into the model weights (both UNet and text encoder) using the [`~diffusers.loaders.LoraLoaderMixin.fuse_lora`] method, which can lead to a speed-up in inference and lower VRAM usage.
+
+```py
+pipe.load_lora_weights("nerijs/pixel-art-xl", weight_name="pixel-art-xl.safetensors", adapter_name="pixel")
+pipe.load_lora_weights("CiroN2022/toy-face", weight_name="toy_face_sdxl.safetensors", adapter_name="toy")
+
+pipe.set_adapters(["pixel", "toy"], adapter_weights=[0.5, 1.0])
+# Fuses the LoRAs into the Unet
+pipe.fuse_lora()
+
+prompt = "toy_face of a hacker with a hoodie, pixel art"
+image = pipe(prompt, num_inference_steps=30, generator=torch.manual_seed(0)).images[0]
+
+# Gets the Unet back to the original state
+pipe.unfuse_lora()
 ```

@@ -552,6 +552,8 @@ class KandinskyV22PriorEmb2EmbPipeline(DiffusionPipeline):
             if hasattr(self, "final_offload_hook") and self.final_offload_hook is not None:
                 self.prior_hook.offload()
 
+        self.maybe_free_model_hooks()
+
         if output_type not in ["pt", "np"]:
             raise ValueError(f"Only the output types `pt` and `np` are supported not output_type={output_type}")
 

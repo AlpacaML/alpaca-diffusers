@@ -18,9 +18,9 @@ Diffusion models are trained to denoise random Gaussian noise step-by-step to ge
 
 Whether you're a developer or an everyday user, this quicktour will introduce you to 🧨 Diffusers and help you get up and generating quickly! There are three main components of the library to know about:
 
-* The [`DiffusionPipeline`] is a high-level end-to-end class designed to rapidly generate samples from pretrained diffusion models for inference.
-* Popular pretrained [model](./api/models) architectures and modules that can be used as building blocks for creating diffusion systems.
-* Many different [schedulers](./api/schedulers/overview) - algorithms that control how noise is added for training, and how to generate denoised images during inference.
+- The [`DiffusionPipeline`] is a high-level end-to-end class designed to rapidly generate samples from pretrained diffusion models for inference.
+- Popular pretrained [model](./api/models) architectures and modules that can be used as building blocks for creating diffusion systems.
+- Many different [schedulers](./api/schedulers/overview) - algorithms that control how noise is added for training, and how to generate denoised images during inference.
 
 The quicktour will show you how to use the [`DiffusionPipeline`] for inference, and then walk you through how to combine a model and scheduler to replicate what's happening inside the [`DiffusionPipeline`].
 
@@ -44,13 +44,13 @@ Before you begin, make sure you have all the necessary libraries installed:
 
 The [`DiffusionPipeline`] is the easiest way to use a pretrained diffusion system for inference. It is an end-to-end system containing the model and the scheduler. You can use the [`DiffusionPipeline`] out-of-the-box for many tasks. Take a look at the table below for some supported tasks, and for a complete list of supported tasks, check out the [🧨 Diffusers Summary](./api/pipelines/overview#diffusers-summary) table.
 
-| **Task**                     | **Description**                                                                                              | **Pipeline**
-|------------------------------|--------------------------------------------------------------------------------------------------------------|-----------------|
-| Unconditional Image Generation          | generate an image from Gaussian noise | [unconditional_image_generation](./using-diffusers/unconditional_image_generation) |
-| Text-Guided Image Generation | generate an image given a text prompt | [conditional_image_generation](./using-diffusers/conditional_image_generation) |
-| Text-Guided Image-to-Image Translation     | adapt an image guided by a text prompt | [img2img](./using-diffusers/img2img) |
-| Text-Guided Image-Inpainting          | fill the masked part of an image given the image, the mask and a text prompt | [inpaint](./using-diffusers/inpaint) |
-| Text-Guided Depth-to-Image Translation | adapt parts of an image guided by a text prompt while preserving structure via depth estimation | [depth2img](./using-diffusers/depth2img) |
+| **Task**                               | **Description**                                                                                 | **Pipeline**                                                                       |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Unconditional Image Generation         | generate an image from Gaussian noise                                                           | [unconditional_image_generation](./using-diffusers/unconditional_image_generation) |
+| Text-Guided Image Generation           | generate an image given a text prompt                                                           | [conditional_image_generation](./using-diffusers/conditional_image_generation)     |
+| Text-Guided Image-to-Image Translation | adapt an image guided by a text prompt                                                          | [img2img](./using-diffusers/img2img)                                               |
+| Text-Guided Image-Inpainting           | fill the masked part of an image given the image, the mask and a text prompt                    | [inpaint](./using-diffusers/inpaint)                                               |
+| Text-Guided Depth-to-Image Translation | adapt parts of an image guided by a text prompt while preserving structure via depth estimation | [depth2img](./using-diffusers/depth2img)                                           |
 
 Start by creating an instance of a [`DiffusionPipeline`] and specify which pipeline checkpoint you would like to download.
 You can use the [`DiffusionPipeline`] for any [checkpoint](https://huggingface.co/models?library=diffusers&sort=downloads) stored on the Hugging Face Hub.
@@ -152,7 +152,7 @@ In the next section, you'll take a closer look at the components - the model and
 
 ## Models
 
-Most models take a noisy sample, and at each timestep it predicts the *noise residual* (other models learn to predict the previous sample directly or the velocity or [`v-prediction`](https://github.com/huggingface/diffusers/blob/5e5ce13e2f89ac45a0066cb3f369462a3cf1d9ef/src/diffusers/schedulers/scheduling_ddim.py#L110)), the difference between a less noisy image and the input image. You can mix and match models to create other diffusion systems.
+Most models take a noisy sample, and at each timestep it predicts the _noise residual_ (other models learn to predict the previous sample directly or the velocity or [`v-prediction`](https://github.com/huggingface/diffusers/blob/5e5ce13e2f89ac45a0066cb3f369462a3cf1d9ef/src/diffusers/schedulers/scheduling_ddim.py#L110)), the difference between a less noisy image and the input image. You can mix and match models to create other diffusion systems.
 
 Models are initiated with the [`~ModelMixin.from_pretrained`] method which also locally caches the model weights so it is faster the next time you load the model. For the quicktour, you'll load the [`UNet2DModel`], a basic unconditional image generation model with a checkpoint trained on cat images:
 
@@ -173,11 +173,11 @@ The model configuration is a 🧊 frozen 🧊 dictionary, which means those para
 
 Some of the most important parameters are:
 
-* `sample_size`: the height and width dimension of the input sample.
-* `in_channels`: the number of input channels of the input sample.
-* `down_block_types` and `up_block_types`: the type of down- and upsampling blocks used to create the UNet architecture.
-* `block_out_channels`: the number of output channels of the downsampling blocks; also used in reverse order for the number of input channels of the upsampling blocks.
-* `layers_per_block`: the number of ResNet blocks present in each UNet block.
+- `sample_size`: the height and width dimension of the input sample.
+- `in_channels`: the number of input channels of the input sample.
+- `down_block_types` and `up_block_types`: the type of down- and upsampling blocks used to create the UNet architecture.
+- `block_out_channels`: the number of output channels of the downsampling blocks; also used in reverse order for the number of input channels of the upsampling blocks.
+- `layers_per_block`: the number of ResNet blocks present in each UNet block.
 
 To use the model for inference, create the image shape with random Gaussian noise. It should have a `batch` axis because the model can receive multiple random noises, a `channel` axis corresponding to the number of input channels, and a `sample_size` axis for the height and width of the image:
 
@@ -245,9 +245,9 @@ DDPMScheduler {
 
 Some of the most important parameters are:
 
-* `num_train_timesteps`: the length of the denoising process or, in other words, the number of timesteps required to process random Gaussian noise into a data sample.
-* `beta_schedule`: the type of noise schedule to use for inference and training.
-* `beta_start` and `beta_end`: the start and end noise values for the noise schedule.
+- `num_train_timesteps`: the length of the denoising process or, in other words, the number of timesteps required to process random Gaussian noise into a data sample.
+- `beta_schedule`: the type of noise schedule to use for inference and training.
+- `beta_start` and `beta_end`: the start and end noise values for the noise schedule.
 
 To predict a slightly less noisy image, pass the following to the scheduler's [`~diffusers.DDPMScheduler.step`] method: model output, `timestep`, and current `sample`.
 
@@ -257,7 +257,7 @@ To predict a slightly less noisy image, pass the following to the scheduler's [`
 torch.Size([1, 3, 256, 256])
 ```
 
-The `less_noisy_sample` can be passed to the next `timestep` where it'll get even less noisy! Let's bring it all together now and visualize the entire denoising process. 
+The `less_noisy_sample` can be passed to the next `timestep` where it'll get even less noisy! Let's bring it all together now and visualize the entire denoising process.
 
 First, create a function that postprocesses and displays the denoised image as a `PIL.Image`:
 
@@ -313,8 +313,8 @@ Sit back and watch as a cat is generated from nothing but noise! 😻
 
 Hopefully, you generated some cool images with 🧨 Diffusers in this quicktour! For your next steps, you can:
 
-* Train or finetune a model to generate your own images in the [training](./tutorials/basic_training) tutorial.
-* See example official and community [training or finetuning scripts](https://github.com/huggingface/diffusers/tree/main/examples#-diffusers-examples) for a variety of use cases.
-* Learn more about loading, accessing, changing, and comparing schedulers in the [Using different Schedulers](./using-diffusers/schedulers) guide.
-* Explore prompt engineering, speed and memory optimizations, and tips and tricks for generating higher-quality images with the [Stable Diffusion](./stable_diffusion) guide.
-* Dive deeper into speeding up 🧨 Diffusers with guides on [optimized PyTorch on a GPU](./optimization/fp16), and inference guides for running [Stable Diffusion on Apple Silicon (M1/M2)](./optimization/mps) and [ONNX Runtime](./optimization/onnx).
+- Train or finetune a model to generate your own images in the [training](./tutorials/basic_training) tutorial.
+- See example official and community [training or finetuning scripts](https://github.com/huggingface/diffusers/tree/main/examples#-diffusers-examples) for a variety of use cases.
+- Learn more about loading, accessing, changing, and comparing schedulers in the [Using different Schedulers](./using-diffusers/schedulers) guide.
+- Explore prompt engineering, speed and memory optimizations, and tips and tricks for generating higher-quality images with the [Stable Diffusion](./stable_diffusion) guide.
+- Dive deeper into speeding up 🧨 Diffusers with guides on [optimized PyTorch on a GPU](./optimization/fp16), and inference guides for running [Stable Diffusion on Apple Silicon (M1/M2)](./optimization/mps) and [ONNX Runtime](./optimization/onnx).
