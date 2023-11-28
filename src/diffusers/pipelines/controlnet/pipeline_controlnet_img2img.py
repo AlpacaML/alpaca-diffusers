@@ -861,6 +861,7 @@ class StableDiffusionControlNetImg2ImgPipeline(
         self,
         prompt: Union[str, List[str]] = None,
         image: PipelineImageInput = None,
+        mask: Optional[Union[torch.FloatTensor, List[torch.FloatTensor]]] = None,
         control_image: PipelineImageInput = None,
         height: Optional[int] = None,
         width: Optional[int] = None,
@@ -897,6 +898,8 @@ class StableDiffusionControlNetImg2ImgPipeline(
                     `List[List[torch.FloatTensor]]`, `List[List[np.ndarray]]` or `List[List[PIL.Image.Image]]`):
                 The initial image to be used as the starting point for the image generation process. Can also accept
                 image latents as `image`, and if passing latents directly they are not encoded again.
+            mask (`torch.FloatTensor` or  `List[torch.FloatTensor]`, *optional*):
+                Added by Will Buchwalter: a mask to be concatenated with the cnet's latents
             control_image (`torch.FloatTensor`, `PIL.Image.Image`, `np.ndarray`, `List[torch.FloatTensor]`, `List[PIL.Image.Image]`, `List[np.ndarray]`,:
                     `List[List[torch.FloatTensor]]`, `List[List[np.ndarray]]` or `List[List[PIL.Image.Image]]`):
                 The ControlNet input condition to provide guidance to the `unet` for generation. If the type is
@@ -1173,6 +1176,7 @@ class StableDiffusionControlNetImg2ImgPipeline(
                     encoder_hidden_states=controlnet_prompt_embeds,
                     controlnet_cond=control_image,
                     conditioning_scale=cond_scale,
+                    controlnet_mask=mask,
                     guess_mode=guess_mode,
                     return_dict=False,
                 )

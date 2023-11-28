@@ -36,6 +36,7 @@ class MultiControlNetModel(ModelMixin):
         encoder_hidden_states: torch.Tensor,
         controlnet_cond: List[torch.tensor],
         conditioning_scale: List[float],
+        controlnet_mask: Optional[List[torch.FloatTensor]] = None,
         class_labels: Optional[torch.Tensor] = None,
         timestep_cond: Optional[torch.Tensor] = None,
         attention_mask: Optional[torch.Tensor] = None,
@@ -44,12 +45,24 @@ class MultiControlNetModel(ModelMixin):
         guess_mode: bool = False,
         return_dict: bool = True,
     ) -> Union[ControlNetOutput, Tuple]:
-        for i, (image, scale, controlnet) in enumerate(zip(controlnet_cond, conditioning_scale, self.nets)):
+        # Will Buchwalter: modification to allow running multicontrolnet 
+        # with masking where not all controlnets might take the mask
+        if controlnet_mask:
+            if not isinstance(controlnet_mask, list):
+                    raise ValueError(
+                        f"`controlnet_mask must be a List or None"
+                    )
+        else:
+            controlnet_mask = [None] * len(self.nets)
+
+
+        for i, (image, mask, scale, controlnet) in enumerate(zip(controlnet_cond, controlnet_mask, conditioning_scale, self.nets)):
             down_samples, mid_sample = controlnet(
                 sample=sample,
                 timestep=timestep,
                 encoder_hidden_states=encoder_hidden_states,
                 controlnet_cond=image,
+                controlnet_mask=mask,
                 conditioning_scale=scale,
                 class_labels=class_labels,
                 timestep_cond=timestep_cond,
