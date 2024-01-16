@@ -879,17 +879,17 @@ class UNet2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixin)
             print("gamma", gamma)
             return gamma
         
-        def add_noise(y, gamma, noise_scale, psi, rescale=True):
+        def add_noise(y, gamma, noise_scale, psi, rescale=False):
             y_mean, y_std = y.mean(), y.std()
             print("y_mean", y_mean)
             print("y_std", y_std)
             y = math.sqrt(gamma) * y + noise_scale * math.sqrt(1 - gamma) * torch.randn_like(y)
-            print("y", y)
+            print("y", y.size())
             if rescale:
                 y_scaled = (y - y.mean()) / y.std() * y_std + y_mean
                 print("y_scaled", y_scaled)
                 y = psi * y_scaled + (1 - psi) * y
-                print("scaled y", y)
+                print("scaled y", y.size())
             return y
         
         encoder_hidden_states = add_noise(encoder_hidden_states, linear_schedule(timestep, 0.6, 0.9), 0.25, 1)
