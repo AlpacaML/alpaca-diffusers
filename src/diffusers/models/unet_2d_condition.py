@@ -886,7 +886,7 @@ class UNet2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixin)
             return y
         
         NUM_TRAIN_TIMESTEPS = 1000
-        encoder_hidden_states = add_noise(encoder_hidden_states, linear_schedule(timestep / NUM_TRAIN_TIMESTEPS, 0.5, 0.8), 0.2, 1)
+        encoder_hidden_states = add_noise(encoder_hidden_states, linear_schedule(timestep / NUM_TRAIN_TIMESTEPS, 0.25, 0.8), 0.25, 1)
 
         # By default samples have to be AT least a multiple of the overall upsampling factor.
         # The overall upsampling factor is equal to 2 ** (# num of upsampling layers).
