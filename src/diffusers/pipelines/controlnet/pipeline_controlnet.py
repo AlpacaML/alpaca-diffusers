@@ -999,6 +999,26 @@ class StableDiffusionControlNetPipeline(
             ]
             controlnet_keep.append(keeps[0] if isinstance(controlnet, ControlNetModel) else keeps)
 
+        # Billy: new CADS code
+
+        def linear_schedule(t, tau1, tau2):
+            if t <= tau1:
+                return 1.0
+            elif t >= tau2:
+                return 0.0
+            gamma = (tau2 - t) / (tau2 - tau1)
+            return gamma
+        
+        def add_noise(y, gamma, noise_scale, psi, rescale=True):
+            y_mean, y_std = y.mean(), y.std()
+            y = torch.sqrt(gamma) * y + noise_scale * torch.sqrt(1 - gamma) * torch.randn_like(y)
+            if rescale:
+                y_scaled = (y - y.mean()) / y.std() * y_std + y_mean
+                y = psi * y_scaled + (1 - psi) * y
+            return y
+        
+        prompt_embeds = add_noise(prompt_embeds, linear_schedule(timesteps, 0.6, 0.9), 0.25, 1)
+
         # 8. Denoising loop
         num_warmup_steps = len(timesteps) - num_inference_steps * self.scheduler.order
         is_unet_compiled = is_compiled_module(self.unet)
