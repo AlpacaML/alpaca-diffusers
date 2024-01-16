@@ -870,26 +870,19 @@ class UNet2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixin)
         # Billy: new CADS code
 
         def linear_schedule(t, tau1, tau2):
-            print("timestep", t)
             if t <= tau1:
                 return 1.0
             elif t >= tau2:
                 return 0.0
             gamma = (tau2 - t) / (tau2 - tau1)
-            print("gamma", gamma)
             return gamma
         
-        def add_noise(y, gamma, noise_scale, psi, rescale=False):
+        def add_noise(y, gamma, noise_scale, psi, rescale=True):
             y_mean, y_std = y.mean(), y.std()
-            print("y_mean", y_mean)
-            print("y_std", y_std)
             y = math.sqrt(gamma) * y + noise_scale * math.sqrt(1 - gamma) * torch.randn_like(y)
-            print("y", y.size())
             if rescale:
                 y_scaled = (y - y.mean()) / y.std() * y_std + y_mean
-                print("y_scaled", y_scaled)
                 y = psi * y_scaled + (1 - psi) * y
-                print("scaled y", y.size())
             return y
         
         NUM_TRAIN_TIMESTEPS = 1000
