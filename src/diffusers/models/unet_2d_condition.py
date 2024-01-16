@@ -864,6 +864,27 @@ class UNet2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixin)
                 If `return_dict` is True, an [`~models.unet_2d_condition.UNet2DConditionOutput`] is returned, otherwise
                 a `tuple` is returned where the first element is the sample tensor.
         """
+
+        # Billy: new CADS code
+
+        def linear_schedule(t, tau1, tau2):
+            if t <= tau1:
+                return 1.0
+            elif t >= tau2:
+                return 0.0
+            gamma = (tau2 - t) / (tau2 - tau1)
+            return gamma
+        
+        def add_noise(y, gamma, noise_scale, psi, rescale=True):
+            y_mean, y_std = y.mean(), y.std()
+            y = torch.sqrt(gamma) * y + noise_scale * torch.sqrt(1 - gamma) * torch.randn_like(y)
+            if rescale:
+                y_scaled = (y - y.mean()) / y.std() * y_std + y_mean
+                y = psi * y_scaled + (1 - psi) * y
+            return y
+        
+        encoder_hidden_states = add_noise(encoder_hidden_states, linear_schedule(timesteps, 0.6, 0.9), 0.25, 1)
+
         # By default samples have to be AT least a multiple of the overall upsampling factor.
         # The overall upsampling factor is equal to 2 ** (# num of upsampling layers).
         # However, the upsampling interpolation output size can be forced to fit any upsampling size
